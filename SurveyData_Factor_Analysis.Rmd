@@ -1,0 +1,259 @@
+---
+title: "Survey Data Analysis III"
+author: "Lizhuo Zhou 20307100132"
+date: "06/23/2023"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rticles)
+```
+
+```{r} 
+#Import Data
+library(psych)
+library(GPArotation)
+library(car)
+library(pheatmap)
+library(caret)
+library(tidyverse)
+library(MASS)
+library(nlme)
+library(statar)
+library(haven)
+library(plm)
+data <- read.csv("Data3.csv")
+head(data)
+```
+## Part I Data Preprocessing
+
+```{r}
+#Standardize the numerical part 
+Numerical<-data[,6:27]
+sd_Data<-scale(Numerical)
+head(sd_Data)
+```
+
+
+```{r}
+summary(sd_Data)
+```
+
+```{r}
+winsorized_SD_Data<-sd_Data
+for (i in 1:22){
+  winsorized_SD_Data[,i]<-statar::winsorize(sd_Data[,i],probs = c(0.01,0.99))
+  
+}
+summary(winsorized_SD_Data)
+
+```
+
+
+```{r}
+Cor<-cor(winsorized_SD_Data)
+pheatmap(Cor,display_numbers = T)
+Cor
+
+
+#The significance of the correlation coefficient
+```
+\
+\ \ Strong (linear) correlation: Eco & Moral;Advertise & Info; Online & Compaign; Community & Online; Personal & Emo
+\
+\ \ 
+
+## Part II: Linear Multivariate Regression
+
+```{r}
+# Dependent Variable-Current Expense
+
+df_winsorized_Data_2<-data.frame(winsorized_SD_Data)
+df_winsorized_Data_2$Gender<-data$Gender
+df_winsorized_Data_2$Loca<-data$Location
+df_winsorized_Data_2$Age<-data$Age
+df_winsorized_Data_2$Brand<-data$Brand
+
+lm_result_CurrExpen<-lm(CurrExpen~Quality+Price
+          +Function+Advertise+Info+Exposure+Eco+
+          +Moral+Image+Loyalty+Membership+Product+Personal+Emo+Community+Online
+          +Compaign+Gift+Remark+Trust+Gender+Loca+Age+Brand,data=df_winsorized_Data_2)
+summary(lm_result_CurrExpen)
+```
+
+\
+\ \ Adjusted R-squared: 0.2421; Multiple R-squared: 0.4955
+\
+\ \ Significance:
+\
+\ \ 0-Brandlamer; 0.001-Trust,Brand修丽可;0.01-Price,Emo,Remark;0.05-BrandSKII,BrandSHISEIDO,BrandEsteeLauder,BrandCPB
+
+
+```{r}
+# Dependent Variable-Future Expense
+lm_result_FutureExpen<-lm(FutureExpen~Quality+Price
+          +Function+Advertise+Info+Exposure+Eco+
+          +Moral+Image+Loyalty+Membership+Product+Personal+Emo+Community+Online
+          +Compaign+Gift+Remark+Trust+Gender+Loca+Age+Brand,data=df_winsorized_Data_2)
+summary(lm_result_FutureExpen)
+```
+
+\
+\ \ Adjusted R-squared: 0.04746; Multiple R-squared: 0.366
+\
+\ \ Significance:
+\
+\ \ 0.001-Brandlamer;0.01-Function, Emo, BrandCPB, Brand修丽可;0.05-Price, Personal, Remark, Trust, BrandSHISEIDO
+
+
+```{r}
+#Eliminate uninformative variables
+step(lm_result_CurrExpen, direction = "back")
+#The lower the AIC, the better the model fit.
+
+
+
+step(lm_result_FutureExpen, direction = "back")
+
+```
+
+```{r}
+lm_result_CurrExpen_2<-lm(CurrExpen~Price+Function+Product+Community+Remark+Trust+Gender+Age,data = df_winsorized_Data_2)
+summary(lm_result_CurrExpen_2)
+```
+\
+\ \ Adjusted R-squared:0.1972; Multiple R-squared:0.2196
+
+```{r}
+# Dependent Variable-Future Expense
+lm_result_FutureExpen_2<-lm(FutureExpen ~ Price+Product+Community+Remark+Gender+Age, data = df_winsorized_Data_2)
+summary(lm_result_FutureExpen_2)
+```
+\
+\ \ Adjusted R-squared:0.1087; Multiple R-squared:0.128
+
+```{r}
+vif(lm_result_CurrExpen)
+
+```
+
+```{r}
+vif(lm_result_FutureExpen)
+
+```
+
+
+```{r}
+vif(lm_result_CurrExpen_2)
+```
+
+```{r}
+vif(lm_result_FutureExpen_2)
+```
+
+
+#-----------------------------------------------
+
+## Part III: Factor Analysis
+
+```{r}
+#Scree Plot
+par(mfrow=c(1,1))
+screeplot(princomp(winsorized_SD_Data),type="lines")
+```
+\
+\ \ The screeplot suggests 9 principal components would be enough to explain most of the data.
+\
+\ \ 
+
+```{r}
+#Factor Analysis: Using correlation matrix(R)
+#Maximum Likelihood Solution
+Cor_2<-cor(winsorized_SD_Data[,3:22])
+
+fa_MLE_rotated_R<-factanal(factors=9,covmat=Cor_2,rotation="varimax")
+fa_MLE_rotated_R
+
+```
+
+
+```{r}
+#Factor Analysis: Using correlation matrix(R)
+#I. Maximum Likelihood Solution for VE
+Data_VE<-winsorized_SD_Data[,3:5]
+Cor_VE<-cor(Data_VE)
+
+par(mfrow=c(1,1))
+screeplot(princomp(Data_VE),type="lines")
+
+
+```
+
+
+```{r}
+fa_MLE_rotated_R_VE<-factanal(factors=1,covmat=Cor_VE,rotation="varimax")
+fa_MLE_rotated_R_VE
+
+```
+
+```{r}
+#Factor Analysis: Using correlation matrix(R)
+#II. Maximum Likelihood Solution for BE
+Data_BE<-winsorized_SD_Data[,6:12]
+Cor_BE<-cor(Data_BE)
+
+par(mfrow=c(1,1))
+screeplot(princomp(Data_BE),type="lines")
+
+
+```
+
+
+```{r}
+fa_MLE_rotated_R_BE<-factanal(factors=3,covmat=Cor_BE,rotation="varimax")
+fa_MLE_rotated_R_BE
+
+```
+
+```{r}
+#Factor Analysis: Using correlation matrix(R)
+#III. Maximum Likelihood Solution for RE
+Data_RE<-winsorized_SD_Data[,13:22]
+Cor_RE<-cor(Data_RE)
+
+par(mfrow=c(1,1))
+screeplot(princomp(Data_RE),type="lines")
+
+
+```
+
+```{r}
+fa_MLE_rotated_R_RE<-factanal(factors=1,covmat=Cor_RE,rotation="varimax")
+fa_MLE_rotated_R_RE
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
