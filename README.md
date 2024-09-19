@@ -1,5 +1,5 @@
 # Optimization-of-Marketing-Resource-Allocation
- Welcome to my undergraduate thesis! It essentially discusses how to optimize the allocation of marketing resources in the fast-moving consumer goods (FMCG) industry with limited marketing resources.
+ Welcome to (part of) my undergraduate thesis! It essentially discusses how to optimize the allocation of marketing resources in the fast-moving consumer goods (FMCG) industry with limited marketing resources.
  
   This study takes the "Herborist" brand under Shanghai Jahwa Group as a case to explore how FMCG companies can optimize their marketing investment strategies through customer value analysis in the context of digital marketing. The research employs three methods: **text mining, questionnaire survey, and fixed effects modeling**.
 
